@@ -5,7 +5,7 @@ x <- data.frame(rbind(c(0,0),
                       c(1,0),
                       c(1,1)))
 
-y <- c(1,0,0,1,0,0)
+y <- c(0,1,1,0,1,0)
 
 ReLU <- function(x){
   return(max(0,x))
@@ -19,8 +19,16 @@ stepf <- function(x){
   }
 }
 
-#setting weights and bias of perceptron
-#activation function : ReLU function
+sigmoid <- function(x){
+  return(1 / (1 + exp(-x)))
+}
+
+sigmoid_prime <- function(x){
+  return(sigmoid(x) * (1 - sigmoid(x)))
+}
+
+#setting weights and bias of 1 hidden layer neural net
+#activation function : ReLU function for hidden, sigmoid function for output
 #online learning
 # a = learning rate
 # x = input data
@@ -29,6 +37,9 @@ stepf <- function(x){
 # e_max = max error
 
 
+
+
+#
 setting_w_and_b <- function(a,x,y,i,e_max){
   y_hat <- c(rnorm(nrow(x)))
   p <- nrow(x)
@@ -50,6 +61,7 @@ setting_w_and_b <- function(a,x,y,i,e_max){
     e <- 1/length(y_hat) * 1/2 * sum((y_hat - y)^2)
     n_iteration <- n_iteration + 1
   }
+  stopCluster(cl)
   return(list(n_iteration-1,w,b))
 }
 
@@ -60,5 +72,6 @@ result
 for(i in 1:nrow(x)){
   print(ReLU(sum(x[i,] * result[[2]]) + result[[3]]))
 }
+
 
 
