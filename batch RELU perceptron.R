@@ -1,9 +1,11 @@
 x <- data.frame(rbind(c(0,0),
                       c(0,1),
+                      c(0,1),
+                      c(0,0),
                       c(1,0),
                       c(1,1)))
 
-y <- c(1,0,0,0)
+y <- c(1,0,0,1,0,0)
 
 ReLU <- function(x){
   return(max(0,x))
@@ -20,6 +22,7 @@ stepf <- function(x){
 
 #setting weights and bias of perceptron
 #activation function : ReLU function
+#loss function : MSE
 #batch learning, parallel computing
 # a = learning rate
 # x = input data
@@ -38,38 +41,35 @@ setting_w_and_b <- function(a,x,y,i_max,e_max){
   w_update <- data.frame(matrix(nrow = nrow(x), ncol = ncol(x)))
   b_update <- data.frame(matrix(nrow = nrow(x), ncol = 1))
   n_iteration <- 1
-  e <- 9999
-
+  
   while(n_iteration <= i_max){
     net <- foreach(i = 1:nrow(x), .combine = 'append') %dopar% {
       sum(x[i,]*w + b)
     }
     y_hat <- foreach(i = 1:nrow(x), .combine = 'append', .export = 'ReLU') %dopar% {
-      ReLU(net)
+      ReLU(net[i])
     }
-    e <- 1/length(y) * 1/2 * sum((y_hat - y)^2)
+    y_hat_prime <- foreach(i = 1:nrow(x), .combine = 'append', .export = 'stepf') %dopar% {
+      stepf(net[i])
+    }
+    e <- (1/length(y)) * 1/2 * sum((y_hat - y)^2)
     if(e < e_max){
       break
+    }else
+    {
+      w <- w - a * (1/length(y) * (sum(y_hat - y * x * y_hat_prime)))
+      b <- b - a * (1/length(y) * (sum(y_hat - y)))
+      n_iteration <- n_iteration + 1
     }
-    error_signal <- sum(y_hat - y)
-    w_update <- foreach(i = 1:nrow(x), .combine = 'rbind', .export = c('ReLU','stepf')) %dopar% {
-      w - (a * 1/length(y) * error_signal * stepf(net) * x[i,])
-    }
-    b_update <- foreach(i = 1:nrow(x), .combine = 'rbind', .export = c('ReLU','stepf')) %dopar% {
-      b - (a * 1/length(y) * error_signal * stepf(net))
-    }
-    w <- apply(w_update, 2, mean)
-    b <- apply(b_update, 2, mean)
-    n_iteration <- n_iteration + 1
   }
   stopCluster(cl)
-  return(list(n_iteration-1,w,b))
+  return(list(n_iteration,w,b,e))
 }
 
-  
-result <- setting_w_and_b(0.1,x,y,10000,0.001)
+result <- setting_w_and_b(0.1,x,y,50000,0.001)
 result
 
 for(i in 1:nrow(x)){
   print(ReLU(sum(x[i,] * result[[2]]) + result[[3]]))
 }
+
